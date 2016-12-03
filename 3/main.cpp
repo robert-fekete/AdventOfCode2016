@@ -15,6 +15,8 @@ int solve_second(istream&);
 
 int main(int argc, char* argv[])
 {
+	cout << solve_first(stringstream("5 10 25")) << endl;
+
 	auto f = ifstream("input.txt");
 	if (f.is_open()){
 		cout << solve_first(f) << endl;
@@ -31,10 +33,41 @@ int main(int argc, char* argv[])
 
 int solve_first(istream& input){
 
-	return 0;
+	int count = 0;
+	while (!input.eof()){
+
+		int a, b, c;
+		input >> a >> b >> c;
+
+		if (a + b > c && a + c > b && b + c > a){
+			++count;
+		}
+	}
+
+	return count;
 }
 
 int solve_second(istream& input){
-	return 0;
+
+	int count = 0;
+	while (!input.eof()){
+
+		vector<int> numbers(9);
+		for (int i = 0; i < 9; ++i){
+			input >> numbers[i];
+		}
+
+		for (int i = 0; i < 3; ++i){
+			int a = numbers[i];
+			int b = numbers[i + 3];
+			int c = numbers[i + 6];
+
+			if (a + b > c && a + c > b && b + c > a){
+				++count;
+			}
+		}
+	}
+
+	return count;
 }
 
