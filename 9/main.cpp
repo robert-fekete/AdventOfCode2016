@@ -15,7 +15,12 @@ int solve_second(istream&);
 
 int main(int argc, char* argv[])
 {
-    cout << solve_first(stringstream("ADVENT\n\nA(1x5)BC\n(3x3)XYZ\nA(2x2)BCD(2x2)EFG\n(6x1)(1x3)A\nX(8x2)(3x3)ABCY\n")) << endl;  // 57
+    cout << solve_first(stringstream("ADVENT")) << endl;  // 6
+    cout << solve_first(stringstream("A(1x5)BC")) << endl;  // 7
+    cout << solve_first(stringstream("(3x3)XYZ")) << endl;  // 9
+    cout << solve_first(stringstream("A(2x2)BCD(2x2)EFG")) << endl;  // 11
+    cout << solve_first(stringstream("(6x1)(1x3)A")) << endl;  // 6
+    cout << solve_first(stringstream("X(8x2)(3x3)ABCY")) << endl;  // 18
 
 	auto f = ifstream("input.txt");
 	if (f.is_open()){
@@ -33,10 +38,10 @@ int main(int argc, char* argv[])
 
 int solve_first(istream& input){
 
+    int temp = 0;
     int result_count = 0;
     while (!input.eof()) {
 
-        stringstream result;
         string line;
         getline(input, line);
 
@@ -44,43 +49,79 @@ int solve_first(istream& input){
             continue;
         }
         
-        int index = 0;
         stringstream line_parser(line);
-        while (index < line.length()) {
+        while (!line_parser.eof()) {
+
             string token; 
             getline(line_parser, token, '(');
-            index += token.length() + 1;
-            result << token;
+            result_count += token.length();
 
             if (line_parser.eof()) {
                 break;
             }
 
             getline(line_parser, token, 'x');
-            index += token.length() + 1;
             auto length = stoi(token);
 
             getline(line_parser, token, ')');
-            index += token.length() + 1;
             auto repeat = stoi(token);
 
             string seq;
             seq.resize(length);
-
             line_parser.read(&seq[0], length);
-            index += length;
 
-            for (int i = 0; i < repeat; ++i) {
-                result << seq;
-            }
+            result_count += length * repeat;
         }
-        result_count += result.str().length();
     }
     
 	return result_count;
 }
 
 int solve_second(istream& input){
-	return 0;
-}
+
+        int result_count = 0;
+        while (!input.eof()) {
+
+            string line;
+            getline(input, line);
+
+            if (line.length() == 0) {
+                continue;
+            }
+
+            int index = 0;
+            stringstream line_parser(line);
+            while (index < line.length()) {
+                string token;
+                getline(line_parser, token, '(');
+                index += token.length() + 1;
+//                result << token;
+
+                if (line_parser.eof()) {
+                    break;
+                }
+
+                getline(line_parser, token, 'x');
+                index += token.length() + 1;
+                auto length = stoi(token);
+
+                getline(line_parser, token, ')');
+                index += token.length() + 1;
+                auto repeat = stoi(token);
+
+                string seq;
+                seq.resize(length);
+
+                line_parser.read(&seq[0], length);
+                index += length;
+
+                for (int i = 0; i < repeat; ++i) {
+//                    result << seq;
+                }
+            }
+//            result_count += result.str().length();
+        }
+
+        return result_count;
+    }
 
