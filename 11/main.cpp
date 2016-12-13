@@ -51,7 +51,7 @@ void skip_tokens(stringstream& line, int num_of_tokens) {
     }
 }
 
-void print(vector<vector<pair<bool, int>>> floors, map<string, int> name_mapping) {
+void print(vector<vector<pair<bool, int>>> floors) {
 
     for (int i = 0; i < 4; ++i) {
         cout << "Floor " << i << ": ";
@@ -67,39 +67,10 @@ void print(vector<vector<pair<bool, int>>> floors, map<string, int> name_mapping
         }
         cout << endl;
     }
-    for (auto p : name_mapping) {
-        cout << p.second << ": " << p.first << endl;
-    }
+    cout << endl;
 }
 
-void push_options(priority_queue<tuple<int, int, int, vector<vector<pair<bool, int>>>>>& queue, vector<vector<pair<bool, int>>> components, vector<pair<bool, int>>& floor, int elevator, int offset, int new_steps, int metric) {
-    
-    auto new_elevator = elevator + offset;
-    for (int i = 0; i < floor.size(); ++i) {
-        auto first = floor[i];
-        auto new_components = components;
-
-        new_components[new_elevator].push_back(first);
-        new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), first));
-        queue.push(make_tuple(metric + offset, INFINITE - new_steps, new_elevator, new_components));
-
-        for (int j = i + 1; j < floor.size(); ++j) {
-            auto second = floor[j];
-            auto new_components = components;
-
-            new_components[new_elevator].push_back(first);
-            new_components[new_elevator].push_back(second);
-            new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), first));
-            new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), second));
-            queue.push(make_tuple(metric + 2 * offset, INFINITE - new_steps, new_elevator, new_components));
-        }
-    }
-}
-
-int solve_first(istream& input){
-
-    vector<vector<pair<bool, int>>> floors(4);
-    map<string, int> name_mapping;
+void parse_input(istream& input, vector<vector<pair<bool, int>>>& floors, map<string, int>& name_mapping) {
     int id_counter = 0;
 
     for (int i = 0; i < 4; ++i) {
@@ -139,30 +110,95 @@ int solve_first(istream& input){
             if (token.compare("and") == 0) {
                 skip_tokens(line_parser, 1);
             }
-            
+
         }
     }
+}
 
-    priority_queue<tuple<int, int, int, vector<vector<pair<bool, int>>>>> queue;
-    map<pair<int, vector<set<pair<bool, int>>>>, bool> visited;
+int calculate_row_distance(vector<vector<pair<bool, int>>>& floors) {
 
     int metric = 0;
     for (int i = 0; i < 4; ++i) {
         metric += (i + 1) * floors[i].size();
     }
-    cout << metric << endl;
 
-    queue.push(make_tuple(metric, INFINITE, 0, floors));
+    return metric;
+}
+
+int calculate_pair_distance(vector<vector<pair<bool, int>>>& floors) {
+
+    int metric = 0;
+    map<int, vector<int>> cache;
+    for (int i = 0; i < 4; ++i) {
+        for (auto object : floors[i]) {
+            cache[object.second].push_back(i);
+        }
+    }
+
+    for (auto pair : cache) {
+        metric += abs(pair.second[0] - pair.second[1]);
+    }
+
+    return INFINITE - metric;
+}
+
+void push_options(priority_queue<tuple<int, int, int, int, vector<vector<pair<bool, int>>>, vector<vector<vector<pair<bool, int>>>>>>& queue, vector<vector<pair<bool, int>>> components, vector<pair<bool, int>>& floor, int elevator, int offset, int new_steps, vector<vector<vector<pair<bool, int>>>> history) {
+    
+    auto new_elevator = elevator + offset;
+    for (int i = 0; i < floor.size(); ++i) {
+        auto first = floor[i];
+        auto new_components = components;
+
+        new_components[new_elevator].push_back(first);
+        new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), first));
+        auto new_history = history;
+        new_history.push_back(new_components);
+        queue.push(make_tuple(calculate_pair_distance(new_components), calculate_row_distance(new_components), INFINITE - new_steps, new_elevator, new_components, new_history));
+
+        for (int j = i + 1; j < floor.size(); ++j) {
+            auto second = floor[j];
+
+            if (first.first != second.first && first.second != second.second) {
+                continue;
+            }
+            auto new_components = components;
+
+            new_components[new_elevator].push_back(first);
+            new_components[new_elevator].push_back(second);
+            new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), first));
+            new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), second));
+            auto new_history = history;
+            new_history.push_back(new_components);
+            queue.push(make_tuple(calculate_pair_distance(new_components), calculate_row_distance(new_components), INFINITE - new_steps, new_elevator, new_components, new_history));
+        }
+    }
+}
+
+int solve_first(istream& input){
+
+    vector<vector<pair<bool, int>>> floors(4);
+    map<string, int> name_mapping;
+    
+    parse_input(input, floors, name_mapping);
+
+    priority_queue<tuple<int, int, int, int, vector<vector<pair<bool, int>>>, vector<vector<vector<pair<bool, int>>>>>> queue;
+    map<pair<int, vector<set<pair<bool, int>>>>, bool> visited;
+
+    calculate_pair_distance(floors);
+
+    int states = 0;
+    queue.push(make_tuple(calculate_pair_distance(floors), calculate_row_distance(floors), INFINITE, 0, floors, vector<vector<vector<pair<bool, int>>>>()));
     int i = 0;
     while (!queue.empty()) {
         
+        states += 1;
         auto current_state = queue.top();
         queue.pop();
 
-        auto metric = get<0>(current_state);
-        auto steps = INFINITE - get<1>(current_state);
-        auto elevator = get<2>(current_state);
-        auto components = get<3>(current_state);
+        auto steps = INFINITE - get<2>(current_state);
+        auto elevator = get<3>(current_state);
+        auto components = get<4>(current_state);
+        auto history = get<5>(current_state);
 
         vector<set<pair<bool, int>>> key_component;
         for (auto f : components) {
@@ -181,6 +217,10 @@ int solve_first(istream& input){
             }
         }
         if (ready) {
+            for (auto state : history) {
+                print(state);
+            }
+            cout << "S: " << states << endl;
             return steps;
         }
 
@@ -212,14 +252,14 @@ int solve_first(istream& input){
             continue;
         }
 
-        print(components, name_mapping);
+        //print(components);
 
         auto floor = components[elevator];
         if (elevator < 3) {
-            push_options(queue, components, floor, elevator, 1, steps + 1, metric);
+            push_options(queue, components, floor, elevator, 1, steps + 1, history);
         }
         if (elevator > 0) {
-            push_options(queue, components, floor, elevator, -1, steps + 1, metric);
+            push_options(queue, components, floor, elevator, -1, steps + 1, history);
         }
     }
 	return -1;
