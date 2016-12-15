@@ -15,23 +15,14 @@ int solve_second(istream&);
 
 int main(int argc, char* argv[])
 {   
-    auto start = chrono::steady_clock::now();
     cout << solve_first(stringstream("Disc #1 has 5 positions; at time=0, it is at position 4.\nDisc #2 has 2 positions; at time=0, it is at position 1.\n")) << endl;  // 5
-    float duration = std::chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - start).count();
-    cout << duration / 1000 / 1000 << " sec" << endl;
 
 	auto f = ifstream("input.txt");
 	if (f.is_open()){
-        start = chrono::steady_clock::now();
 		cout << solve_first(f) << endl;
-        duration = std::chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - start).count();
-        cout << duration / 1000 / 1000 << " sec" << endl;
 		f.clear();
 		f.seekg(0, ios::beg);
-        start = chrono::steady_clock::now();
 		cout << solve_second(f) << endl;
-        duration = std::chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - start).count();
-        cout << duration / 1000 / 1000 << " sec" << endl;
 	}
 	else{
 		cout << "File not found" << endl;
@@ -89,14 +80,13 @@ int solve(vector<pair<int, int>>& discs) {
 
     int index = 0;
     bool fell_through = false;
+    for (int i = 0; i < discs.size(); ++i) {
+        discs[i].second += i + 1;
+    }
+
     while (!fell_through) {
 
-        bool time_ok = true;
-        for (int i = 0; i < discs.size(); ++i) {
-
-            time_ok &= ((discs[i].second + index + i + 1) % discs[i].first) == 0;
-        }
-        fell_through = time_ok;
+        fell_through = all_of(begin(discs), end(discs), [&discs, index](pair<int, int> disc) -> bool { return (disc.second + index) % disc.first == 0; });
         ++index;
     }
     return index - 1;
