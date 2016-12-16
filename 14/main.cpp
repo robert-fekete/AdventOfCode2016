@@ -89,7 +89,6 @@ int solve_with_hash(string salt, function<string(string)> hasher) {
             if (group != 0) {
                 if (any_of(begin(hashes) + hash_iter + 1, begin(hashes) + hash_iter + 1000, [group](string hash) -> bool { return has_same_characters(hash, group); })) {
 
-                    cout << hash_iter << endl;
                     ++pads;
                 }
             }
