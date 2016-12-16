@@ -26,7 +26,6 @@ int main(int argc, char* argv[])
     cout << check_sum("110010110100000", 12) << endl << endl;  // 100
 
     cout << solve_first("10000", 20) << endl;  // 01100
-    cout << solve_second(stringstream("")) << endl << endl;  //
 
     cout << solve_first("11101000110010100", 272) << endl;  // 01100
     cout << solve_first("11101000110010100", 35651584) << endl;  // 01100
