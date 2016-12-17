@@ -112,6 +112,7 @@ void parse_input(istream& input, vector<vector<pair<bool, int>>>& floors, map<st
             }
 
         }
+		sort(begin(floors[i]), end(floors[i]));
     }
 }
 
@@ -119,7 +120,7 @@ int calculate_row_distance(vector<vector<pair<bool, int>>>& floors) {
 
     int metric = 0;
     for (int i = 0; i < 4; ++i) {
-        metric += (i + 1) * floors[i].size();
+        metric += (3 - i) * floors[i].size();
     }
 
     return metric;
@@ -139,21 +140,22 @@ int calculate_pair_distance(vector<vector<pair<bool, int>>>& floors) {
         metric += abs(pair.second[0] - pair.second[1]);
     }
 
-    return INFINITE - metric;
+    return metric;
 }
 
-void push_options(priority_queue<tuple<int, int, int, int, vector<vector<pair<bool, int>>>, vector<vector<vector<pair<bool, int>>>>>>& queue, vector<vector<pair<bool, int>>> components, vector<pair<bool, int>>& floor, int elevator, int offset, int new_steps, vector<vector<vector<pair<bool, int>>>> history) {
+void push_options(priority_queue<tuple<int, int, int, vector<vector<pair<bool, int>>>, vector<vector<vector<pair<bool, int>>>>>>& queue, vector<vector<pair<bool, int>>> components, vector<pair<bool, int>>& floor, int elevator, int offset, int new_steps, vector<vector<vector<pair<bool, int>>>> history) {
     
     auto new_elevator = elevator + offset;
     for (int i = 0; i < floor.size(); ++i) {
         auto first = floor[i];
         auto new_components = components;
 
-        new_components[new_elevator].push_back(first);
+		new_components[new_elevator].push_back(first);
+		sort(begin(new_components[new_elevator]), end(new_components[new_elevator]));
         new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), first));
         auto new_history = history;
         new_history.push_back(new_components);
-        queue.push(make_tuple(calculate_pair_distance(new_components), calculate_row_distance(new_components), INFINITE - new_steps, new_elevator, new_components, new_history));
+		queue.push(make_tuple(INFINITE - new_steps - calculate_row_distance(new_components) - calculate_pair_distance(new_components), INFINITE - new_steps, new_elevator, new_components, new_history));
 
         for (int j = i + 1; j < floor.size(); ++j) {
             auto second = floor[j];
@@ -165,11 +167,12 @@ void push_options(priority_queue<tuple<int, int, int, int, vector<vector<pair<bo
 
             new_components[new_elevator].push_back(first);
             new_components[new_elevator].push_back(second);
+			sort(begin(new_components[new_elevator]), end(new_components[new_elevator]));
             new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), first));
             new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), second));
             auto new_history = history;
             new_history.push_back(new_components);
-            queue.push(make_tuple(calculate_pair_distance(new_components), calculate_row_distance(new_components), INFINITE - new_steps, new_elevator, new_components, new_history));
+			queue.push(make_tuple(INFINITE - new_steps - calculate_row_distance(new_components) - calculate_pair_distance(new_components), INFINITE - new_steps, new_elevator, new_components, new_history));
         }
     }
 }
@@ -181,13 +184,19 @@ int solve_first(istream& input){
     
     parse_input(input, floors, name_mapping);
 
-    priority_queue<tuple<int, int, int, int, vector<vector<pair<bool, int>>>, vector<vector<vector<pair<bool, int>>>>>> queue;
-    map<pair<int, vector<set<pair<bool, int>>>>, bool> visited;
+    priority_queue<tuple<int, int, int, vector<vector<pair<bool, int>>>, vector<vector<vector<pair<bool, int>>>>>> queue;
+    map<pair<int, vector<vector<pair<bool, int>>>>, bool> visited;
 
-    calculate_pair_distance(floors);
+	vector<vector<pair<bool, int>>> initial(4);
+	for (auto p : name_mapping){
+		initial[3].push_back(make_pair(true, p.second));
+		initial[3].push_back(make_pair(false, p.second));
+	}
+	print(initial);
+	print(floors);
 
     int states = 0;
-    queue.push(make_tuple(calculate_pair_distance(floors), calculate_row_distance(floors), INFINITE, 0, floors, vector<vector<vector<pair<bool, int>>>>()));
+	queue.push(make_tuple(INFINITE, INFINITE, 0, floors, vector<vector<vector<pair<bool, int>>>>()));
     int i = 0;
     while (!queue.empty()) {
         
@@ -195,24 +204,20 @@ int solve_first(istream& input){
         auto current_state = queue.top();
         queue.pop();
 
-        auto steps = INFINITE - get<2>(current_state);
-        auto elevator = get<3>(current_state);
-        auto components = get<4>(current_state);
-        auto history = get<5>(current_state);
+        auto steps = INFINITE - get<1>(current_state);
+        auto elevator = get<2>(current_state);
+        auto components = get<3>(current_state);
+        auto history = get<4>(current_state);
 
-        vector<set<pair<bool, int>>> key_component;
-        for (auto f : components) {
-            key_component.push_back(set<pair<bool, int>>(begin(f), end(f)));
-        }
-        auto key = make_pair(elevator, key_component);
+		auto key = make_pair(elevator, components);
         if (visited[key]) {
             continue;
         }
         visited[key] = true;
 
         bool ready = true;
-        for (int i = 0; i < 3; ++i) {
-            if (components[i].size() != 0) {
+		for (int i = 0; i < 3; ++i) {
+			if (components[i].size() != 0) {
                 ready = false;
             }
         }
