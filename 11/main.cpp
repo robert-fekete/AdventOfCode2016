@@ -151,7 +151,6 @@ void push_options(priority_queue<tuple<int, int, int, vector<vector<pair<bool, i
         auto new_components = components;
 
 		new_components[new_elevator].push_back(first);
-		sort(begin(new_components[new_elevator]), end(new_components[new_elevator]));
         new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), first));
         auto new_history = history;
         new_history.push_back(new_components);
@@ -167,7 +166,6 @@ void push_options(priority_queue<tuple<int, int, int, vector<vector<pair<bool, i
 
             new_components[new_elevator].push_back(first);
             new_components[new_elevator].push_back(second);
-			sort(begin(new_components[new_elevator]), end(new_components[new_elevator]));
             new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), first));
             new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), second));
             auto new_history = history;
@@ -185,7 +183,7 @@ int solve_first(istream& input){
     parse_input(input, floors, name_mapping);
 
     priority_queue<tuple<int, int, int, vector<vector<pair<bool, int>>>, vector<vector<vector<pair<bool, int>>>>>> queue;
-    map<pair<int, vector<vector<pair<bool, int>>>>, bool> visited;
+	map<pair<int, vector<set<pair<bool, int>>>>, bool> visited;
 
 	vector<vector<pair<bool, int>>> initial(4);
 	for (auto p : name_mapping){
@@ -209,7 +207,12 @@ int solve_first(istream& input){
         auto components = get<3>(current_state);
         auto history = get<4>(current_state);
 
-		auto key = make_pair(elevator, components);
+		vector<set<pair<bool, int>>> key_component;
+		for (auto f : components) {
+			key_component.push_back(set<pair<bool, int>>(begin(f), end(f)));
+		}
+		auto key = make_pair(elevator, key_component);
+
         if (visited[key]) {
             continue;
         }
