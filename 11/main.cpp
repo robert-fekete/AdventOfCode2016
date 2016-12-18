@@ -143,7 +143,7 @@ int calculate_pair_distance(vector<vector<pair<bool, int>>>& floors) {
     return metric;
 }
 
-void push_options(priority_queue<tuple<int, int, int, vector<vector<pair<bool, int>>>, vector<vector<vector<pair<bool, int>>>>>>& queue, vector<vector<pair<bool, int>>> components, vector<pair<bool, int>>& floor, int elevator, int offset, int new_steps, vector<vector<vector<pair<bool, int>>>> history) {
+void push_options(priority_queue<tuple<int, int, int, vector<vector<pair<bool, int>>>>>& queue, vector<vector<pair<bool, int>>> components, vector<pair<bool, int>>& floor, int elevator, int offset, int new_steps) {
     
     auto new_elevator = elevator + offset;
     for (int i = 0; i < floor.size(); ++i) {
@@ -152,9 +152,7 @@ void push_options(priority_queue<tuple<int, int, int, vector<vector<pair<bool, i
 
 		new_components[new_elevator].push_back(first);
         new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), first));
-        auto new_history = history;
-        new_history.push_back(new_components);
-		queue.push(make_tuple(INFINITE - new_steps - calculate_row_distance(new_components) - calculate_pair_distance(new_components), INFINITE - new_steps, new_elevator, new_components, new_history));
+		queue.push(make_tuple(INFINITE - new_steps - calculate_row_distance(new_components) - calculate_pair_distance(new_components), INFINITE - new_steps, new_elevator, new_components));
 
         for (int j = i + 1; j < floor.size(); ++j) {
             auto second = floor[j];
@@ -168,9 +166,7 @@ void push_options(priority_queue<tuple<int, int, int, vector<vector<pair<bool, i
             new_components[new_elevator].push_back(second);
             new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), first));
             new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), second));
-            auto new_history = history;
-            new_history.push_back(new_components);
-			queue.push(make_tuple(INFINITE - new_steps - calculate_row_distance(new_components) - calculate_pair_distance(new_components), INFINITE - new_steps, new_elevator, new_components, new_history));
+			queue.push(make_tuple(INFINITE - new_steps - calculate_row_distance(new_components) - calculate_pair_distance(new_components), INFINITE - new_steps, new_elevator, new_components));
         }
     }
 }
@@ -182,7 +178,7 @@ int solve_first(istream& input){
     
     parse_input(input, floors, name_mapping);
 
-    priority_queue<tuple<int, int, int, vector<vector<pair<bool, int>>>, vector<vector<vector<pair<bool, int>>>>>> queue;
+    priority_queue<tuple<int, int, int, vector<vector<pair<bool, int>>>>> queue;
 	map<pair<int, vector<set<pair<bool, int>>>>, bool> visited;
 
 	vector<vector<pair<bool, int>>> initial(4);
@@ -194,7 +190,7 @@ int solve_first(istream& input){
 	print(floors);
 
     int states = 0;
-	queue.push(make_tuple(INFINITE, INFINITE, 0, floors, vector<vector<vector<pair<bool, int>>>>()));
+	queue.push(make_tuple(INFINITE, INFINITE, 0, floors));
     int i = 0;
     while (!queue.empty()) {
         
@@ -205,7 +201,6 @@ int solve_first(istream& input){
         auto steps = INFINITE - get<1>(current_state);
         auto elevator = get<2>(current_state);
         auto components = get<3>(current_state);
-        auto history = get<4>(current_state);
 
 		vector<set<pair<bool, int>>> key_component;
 		for (auto f : components) {
@@ -225,9 +220,6 @@ int solve_first(istream& input){
             }
         }
         if (ready) {
-            for (auto state : history) {
-                print(state);
-            }
             cout << "S: " << states << endl;
             return steps;
         }
@@ -264,10 +256,10 @@ int solve_first(istream& input){
 
         auto floor = components[elevator];
         if (elevator < 3) {
-            push_options(queue, components, floor, elevator, 1, steps + 1, history);
+            push_options(queue, components, floor, elevator, 1, steps + 1);
         }
         if (elevator > 0) {
-            push_options(queue, components, floor, elevator, -1, steps + 1, history);
+            push_options(queue, components, floor, elevator, -1, steps + 1);
         }
     }
 	return -1;
