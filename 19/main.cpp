@@ -23,7 +23,24 @@ int main(int argc, char* argv[])
 
     cout << solve_first(3004953) << endl;
 
+    cout << solve_second(5) << endl;  // 2
+    cout << solve_second(6) << endl;  // 3 !!!!
+
+    for (int i = 1; i < 30; ++i) {
+        cout << i << " " << solve_second(i) << endl;
+    }
+
+    cout << solve_second(3004953) << endl;
+
 	return 0;
+}
+
+int solve_first(int elf_number){
+
+    int lower_two_exp = floor(log2(elf_number));
+    int remaining = elf_number - pow(2, lower_two_exp);
+
+    return 1 + 2 * remaining;
 }
 
 int get_next_elf(int index, vector<bool> elfs) {
@@ -36,27 +53,24 @@ int get_next_elf(int index, vector<bool> elfs) {
     return index;
 }
 
-int solve_first(int elf_number){
-
-    int lower_two_exp = floor(log2(elf_number));
-    int remaining = elf_number - pow(2, lower_two_exp);
-
-    return 1 + 2 * remaining;
-}
-
 int solve_second(int elf_number){
 
-    vector<bool> elfs(elf_number, true);
+    vector<int> elfs;
+    for (int i = 0; i < elf_number; ++i) {
+        elfs.push_back(i);
+    }
 
     int index = 0;
     bool dies = false;
-    while (any_of(begin(elfs), end(elfs), [](bool elf) -> bool { return elf; })) {
+    while (elfs.size() > 1) {
 
-        index = get_next_elf(index, elfs);
-        elfs[index] = dies;
-        dies = !dies;
+        int offset = floor(elfs.size() / 2.0);
+        int remove_index = (index + offset) % elfs.size();
+        ++index;
+        index %= elfs.size();
+        elfs.erase(begin(elfs) + remove_index);
     }
 
-    return index + 1;
+    return elfs[0] + 1;
 }
 
