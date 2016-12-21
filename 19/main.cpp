@@ -40,16 +40,6 @@ int solve_first(int elf_number){
     return 1 + 2 * remaining;
 }
 
-int get_next_elf(int index, vector<bool> elfs) {
-
-    do {
-        ++index;
-        index %= elfs.size();
-    } while (!elfs[index]);
-
-    return index;
-}
-
 int solve_second(int elf_number){
 
 	if (elf_number == 1){
