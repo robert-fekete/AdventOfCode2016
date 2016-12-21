@@ -12,6 +12,8 @@ using namespace std;
 
 int solve_first(int);
 int solve_second(int);
+int a(int);
+
 
 int main(int argc, char* argv[])
 {
@@ -19,18 +21,13 @@ int main(int argc, char* argv[])
     cout << solve_first(10) << endl;  // 5
     cout << solve_first(26) << endl;  // 21
 
-    // cout << solve_second(stringstream("")) << endl;  //
 
     cout << solve_first(3004953) << endl;
 
     cout << solve_second(5) << endl;  // 2
-    cout << solve_second(6) << endl;  // 3 !!!!
-
-    for (int i = 1; i < 30; ++i) {
-        cout << i << " " << solve_second(i) << endl;
-    }
-
-    cout << solve_second(3004953) << endl;
+    cout << solve_second(6) << endl;  // 3
+	
+	cout << solve_second(3004953) << endl;
 
 	return 0;
 }
@@ -55,22 +52,22 @@ int get_next_elf(int index, vector<bool> elfs) {
 
 int solve_second(int elf_number){
 
-    vector<int> elfs;
-    for (int i = 0; i < elf_number; ++i) {
-        elfs.push_back(i);
-    }
+	if (elf_number == 1){
+		return 1;
+	}
 
-    int index = 0;
-    bool dies = false;
-    while (elfs.size() > 1) {
+	int lower_three_exponent = floor(log(elf_number) / log(3));
+	int lower_three_exponential = pow(3, lower_three_exponent);
+	int diff = elf_number - lower_three_exponential;
 
-        int offset = floor(elfs.size() / 2.0);
-        int remove_index = (index + offset) % elfs.size();
-        ++index;
-        index %= elfs.size();
-        elfs.erase(begin(elfs) + remove_index);
-    }
-
-    return elfs[0] + 1;
+	if (diff == 0){
+		return lower_three_exponential;
+	}
+	else if (diff <= lower_three_exponential){
+		return diff;
+	}
+	else{
+		return 2 * diff - lower_three_exponential;
+	}
 }
 
