@@ -19,14 +19,13 @@ int solve_second(istream&);
 int main(int argc, char* argv[])
 {
     cout << solve_first(stringstream("The first floor contains a hydrogen-compatible microchip and a lithium-compatible microchip.\nThe second floor contains a hydrogen generator.\nThe third floor contains a lithium generator.\nThe fourth floor contains nothing relevant.")) << endl;  // 11
-    cout << solve_second(stringstream("")) << endl;  //
 
 	auto f = ifstream("input.txt");
 	if (f.is_open()){
 		cout << solve_first(f) << endl;
 		f.clear();
 		f.seekg(0, ios::beg);
-		// cout << solve_second(f) << endl;
+		cout << solve_second(f) << endl;
 	}
 	else{
 		cout << "File not found" << endl;
@@ -112,63 +111,27 @@ void parse_input(istream& input, vector<vector<pair<bool, int>>>& floors, map<st
             }
 
         }
-		sort(begin(floors[i]), end(floors[i]));
     }
 }
 
-int calculate_row_distance(vector<vector<pair<bool, int>>>& floors) {
+int solve(vector<vector<pair<bool, int>>>& floors) {
 
-    int metric = 0;
+    int total = 0;
+    floors[0].pop_back();
+    int index = 0;
+    while (floors[index].size() == 0) {
+        ++index;
+    }
+    floors[index].pop_back();
+    total += (3 - index);
+
     for (int i = 0; i < 4; ++i) {
-        metric += (3 - i) * floors[i].size();
+        int cost = 3 - i;
+        int number = (floors[i].size()) * 2;
+        total += cost * number;
     }
 
-    return metric;
-}
-
-int calculate_pair_distance(vector<vector<pair<bool, int>>>& floors) {
-
-    int metric = 0;
-    map<int, vector<int>> cache;
-    for (int i = 0; i < 4; ++i) {
-        for (auto object : floors[i]) {
-            cache[object.second].push_back(i);
-        }
-    }
-
-    for (auto pair : cache) {
-        metric += abs(pair.second[0] - pair.second[1]);
-    }
-
-    return metric;
-}
-
-void push_options(priority_queue<tuple<int, int, int, vector<vector<pair<bool, int>>>>>& queue, vector<vector<pair<bool, int>>> components, vector<pair<bool, int>>& floor, int elevator, int offset, int new_steps) {
-    
-    auto new_elevator = elevator + offset;
-    for (int i = 0; i < floor.size(); ++i) {
-        auto first = floor[i];
-        auto new_components = components;
-
-		new_components[new_elevator].push_back(first);
-        new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), first));
-		queue.push(make_tuple(INFINITE - new_steps - calculate_row_distance(new_components) - calculate_pair_distance(new_components), INFINITE - new_steps, new_elevator, new_components));
-
-        for (int j = i + 1; j < floor.size(); ++j) {
-            auto second = floor[j];
-
-            if (first.first != second.first && first.second != second.second) {
-                continue;
-            }
-            auto new_components = components;
-
-            new_components[new_elevator].push_back(first);
-            new_components[new_elevator].push_back(second);
-            new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), first));
-            new_components[elevator].erase(find(begin(new_components[elevator]), end(new_components[elevator]), second));
-			queue.push(make_tuple(INFINITE - new_steps - calculate_row_distance(new_components) - calculate_pair_distance(new_components), INFINITE - new_steps, new_elevator, new_components));
-        }
-    }
+    return total;
 }
 
 int solve_first(istream& input){
@@ -177,95 +140,27 @@ int solve_first(istream& input){
     map<string, int> name_mapping;
     
     parse_input(input, floors, name_mapping);
-
-    priority_queue<tuple<int, int, int, vector<vector<pair<bool, int>>>>> queue;
-	map<pair<int, vector<set<pair<bool, int>>>>, bool> visited;
-
-	vector<vector<pair<bool, int>>> initial(4);
-	for (auto p : name_mapping){
-		initial[3].push_back(make_pair(true, p.second));
-		initial[3].push_back(make_pair(false, p.second));
-	}
-	print(initial);
-	print(floors);
-
-    int states = 0;
-	queue.push(make_tuple(INFINITE, INFINITE, 0, floors));
-    int i = 0;
-    while (!queue.empty()) {
-        
-        states += 1;
-        auto current_state = queue.top();
-        queue.pop();
-
-        auto steps = INFINITE - get<1>(current_state);
-        auto elevator = get<2>(current_state);
-        auto components = get<3>(current_state);
-
-		vector<set<pair<bool, int>>> key_component;
-		for (auto f : components) {
-			key_component.push_back(set<pair<bool, int>>(begin(f), end(f)));
-		}
-		auto key = make_pair(elevator, key_component);
-
-        if (visited[key]) {
-            continue;
-        }
-        visited[key] = true;
-
-        bool ready = true;
-		for (int i = 0; i < 3; ++i) {
-			if (components[i].size() != 0) {
-                ready = false;
-            }
-        }
-        if (ready) {
-            cout << "S: " << states << endl;
-            return steps;
-        }
-
-        bool invalid = false;
-        for (int i = 0; i < 4 && !invalid; ++i) {
-            vector<int> chips;
-            vector<int> generators;
-
-            for (auto p : components[i]) {
-                if (p.first) {
-                    generators.push_back(p.second);
-                }
-                else {
-                    chips.push_back(p.second);
-                }
-            }
-            if (generators.size() == 0) {
-                continue;
-            }
-            for (auto c : chips) {
-                if (find(begin(generators), end(generators), c) == end(generators)) {
-                    invalid = true;
-                    break;
-                }
-            }
-        }
-
-        if (invalid) {
-            continue;
-        }
-
-        //print(components);
-
-        auto floor = components[elevator];
-        if (elevator < 3) {
-            push_options(queue, components, floor, elevator, 1, steps + 1);
-        }
-        if (elevator > 0) {
-            push_options(queue, components, floor, elevator, -1, steps + 1);
-        }
-    }
-	return -1;
+    
+    return solve(floors);
 }
 
 int solve_second(istream& input){
-	return 0;
+
+    vector<vector<pair<bool, int>>> floors(4);
+    map<string, int> name_mapping;
+    int element = name_mapping.size();
+    floors[0].push_back(make_pair(true, element));
+    floors[0].push_back(make_pair(false, element));
+    name_mapping["elerium"] = element;
+    ++element;
+
+    floors[0].push_back(make_pair(true, element));
+    floors[0].push_back(make_pair(false, element));
+    name_mapping["dilithium"] = element;
+
+
+    parse_input(input, floors, name_mapping);
+
+    return solve(floors);
 }
 
