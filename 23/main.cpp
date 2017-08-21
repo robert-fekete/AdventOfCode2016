@@ -13,15 +13,15 @@ int solve(istream&, int = 0, int = 0, int = 0, int = 0);
 
 int main(int argc, char* argv[])
 {
-  cout << solve(stringstream("cpy 41 a\ninc a\ninc a\ndec a\njnz a 2\ndec a")) << endl;  // 42
-  cout << solve(stringstream("cpy 2 a\ntgl a\ntgl a\ntgl a\ncpy 1 a\ndec a\ndec a")) << endl;  // 7
+  //cout << solve(stringstream("cpy 41 a\ninc a\ninc a\ndec a\njnz a 2\ndec a")) << endl;  // 42
+  cout << solve(stringstream("cpy 2 a\ntgl a\ntgl a\ntgl a\ncpy 1 a\ndec a\ndec a")) << endl;  // 3
 
 	auto f = ifstream("input.txt");
 	if (f.is_open()){
-		cout << solve(f) << endl;
+		//cout << solve(f, 7, 0, 0, 0) << endl;
 		f.clear();
 		f.seekg(0, ios::beg);
-		//cout << solve(f, 0, 0, 1, 0) << endl;
+		cout << solve(f, 12, 0, 0, 0) << endl;
 	}
 	else{
 		cout << "File not found" << endl;
@@ -79,111 +79,169 @@ Param create_param(string token)
   }
 }
 
-typedef function<void(map<char, int>&, int&)> instruction;
-typedef vector<pair<instruction, instruction>> instruction_array;
-
-instruction create_jmp(string token, map<char, int>& registers, Param first, Param second);
-instruction create_cpy(string token, map<char, int>& registers, Param first, Param second);
-instruction create_inc(string token, map<char, int>& registers, Param first);
-instruction create_dec(string token, map<char, int>& registers, Param first);
-instruction create_tgl(string token, map<char, int>& registers, instruction_array& instructions, Param first);
-
-instruction create_jmp(string token, map<char, int>& registers, Param first, Param second)
+struct Instruction
 {
-  return [first, second](map<char, int>& registers, int& index) ->void
+  Instruction(vector<Param> params, string name, function<void(map<char, int>&, int&, vector<Param>, vector<Instruction>&)> instruction)
+    : params(params), name(name), instruction(instruction)
+  {}
+
+  vector<Param> params;
+  string name;
+  function<void(map<char, int>&, int&, vector<Param>, vector<Instruction>&)> instruction;
+
+  void Do(map<char, int>& registers, int& index, vector<Instruction>& instructions)
   {
-    if (first.get_value(registers) != 0)
+    instruction(registers, index, params, instructions);
+  }
+};
+
+Instruction toggle(vector<Param> params, string name);
+
+Instruction create_inst(vector<Param> params, string name)
+{
+  if (name == "inc")
+  {
+      return Instruction(params, name, [](map<char, int>& registers, int& index, vector<Param> params, vector<Instruction>& instructions) -> void
+      {
+        index++;
+        if (params[0].is_literal)
+        {
+          return;
+        }
+    
+        registers[params[0].key]++;
+      });
+  }
+  else if(name == "dec")
+  {
+    return Instruction(params, name, [](map<char, int>& registers, int& index, vector<Param> params, vector<Instruction>& instructions) -> void
     {
-      index += second.get_value(registers);
+      index++;
+      if (params[0].is_literal)
+      {
+        return;
+      }
+
+      registers[params[0].key]--;
+    });
+  }
+  else if (name == "cpy")
+  {
+    return Instruction(params, name, [](map<char, int>& registers, int& index, vector<Param> params, vector<Instruction>& instructions) -> void
+    {
+      index++;
+      if (params[1].is_literal)
+      {
+        return;
+      }
+
+      registers[params[1].key] = params[0].get_value(registers);
+    });
+  }
+  else if (name == "jnz")
+  {
+    return Instruction(params, name, [](map<char, int>& registers, int& index, vector<Param> params, vector<Instruction>& instructions) -> void
+    {
+      if (params[0].get_value(registers) != 0)
+      {
+        index += params[1].get_value(registers);
+      }
+      else
+      {
+        index += 1;
+      }
+    });
+  }
+  else if (name == "tgl")
+  {
+    return Instruction(params, name, [](map<char, int>& registers, int& index, vector<Param> params, vector<Instruction>& instructions) -> void
+    {
+          int offset = params[0].get_value(registers);
+          int inst_index = index + offset;
+          if (inst_index >= instructions.size())
+          {
+            index++;
+            return;
+          }
+          auto inst = instructions[inst_index];
+          instructions[inst_index] = toggle(inst.params, inst.name);
+          index++;
+    });
+  }
+  return Instruction(params, name, [](map<char, int>&, int&, vector<Param>, vector<Instruction>&)->void
+  {
+    cout << "Ooo-ooo...." << endl;
+  });
+}
+
+Instruction toggle(vector<Param> params, string name)
+{
+  if (name == "inc")
+  {
+    return create_inst(params, "dec");
+  }
+  else if (name == "dec")
+  {
+    return create_inst(params, "inc");
+  }
+  else if (name == "jnz")
+  {
+    return create_inst(params, "cpy");
+  }
+  else if (name == "cpy")
+  {
+    return create_inst(params, "jnz");
+  }
+  else if (name == "tgl")
+  {
+    return create_inst(params, "inc");
+  }
+}
+
+void print(int instruction_index, vector<Instruction> instructions, map<char, int>& registers)
+{
+  int index = 0;
+  for (auto inst : instructions)
+  {
+    if (index == instruction_index)
+    {
+      cout << "-> ";
     }
     else
     {
-      index += 1;
+      cout << "   ";
     }
-  };
-}
 
-instruction toggle_jmp(string token, map<char, int>& registers, Param first, Param second)
-{
-  return create_cpy(token, registers, first, second);
-}
-
-instruction create_cpy(string token, map<char, int>& registers, Param first, Param second)
-{
-  return [first, second](map<char, int>& registers, int& index) -> void
-  {
-    index++;
-    if (second.is_literal)
+    cout << inst.name;
+    for (auto param : inst.params)
     {
-      return;
+      cout << " ";
+      if (param.is_literal)
+      {
+        cout << param.value;
+      }
+      else
+      {
+        cout << param.key;
+      }
     }
-
-    registers[second.key] = first.get_value(registers);
-  };
-}
-
-instruction toggle_cpy(string token, map<char, int>& registers, Param first, Param second)
-{
-  return create_jmp(token, registers, first, second);
-}
-
-instruction create_inc(string token, map<char, int>& registers, Param first)
-{
-  return [first](map<char, int>& registers, int& index) -> void
-  {
-    index++;
-    if (first.is_literal)
+    if (index < 4)
     {
-      return;
+      cout << "\t\t";
+      char key = 'a' + index;
+      cout << key << " " << registers[key];
     }
-
-    registers[first.key]++;
-  };
-}
-
-instruction toggle_inc(string token, map<char, int>& registers, Param first)
-{
-  return create_dec(token, registers, first);
-}
-
-instruction create_dec(string token, map<char, int>& registers, Param first)
-{
-  return [first](map<char, int>& registers, int& index) -> void
-  {
+    cout << endl;
     index++;
-    if (first.is_literal)
-    {
-      return;
-    }
+  }
+  cout << endl;
 
-    registers[first.key]--;
-  };
 }
 
-instruction toggle_dec(string token, map<char, int>& registers, Param first)
-{
-  return create_dec(token, registers, first);
-}
-
-instruction create_tgl(string token, map<char, int>& registers, instruction_array& instructions, Param first)
-{
-  return [&instructions, first](map<char, int>& registers, int& index) -> void
-  {
-    int offset = first.get_value(registers);
-    auto inst = instructions[index + offset];
-    instructions[index + offset] = make_pair(inst.second, inst.first);
-    index++;
-  };
-}
-
-instruction toggle_tgl(string token, map<char, int>& registers, Param first)
-{
-  return create_inc(token, registers, first);
-}
 
 int solve(istream& input, int a, int b, int c, int d){
 
-    instruction_array instructions;
+    vector<Instruction> instructions;
 
     map<char, int> registers{
         { 'a', a },
@@ -192,65 +250,41 @@ int solve(istream& input, int a, int b, int c, int d){
         { 'd', d },
     };
 
-    while (!input.eof()) {
+    while (!input.eof())
+    {
 
-        string line;
-        getline(input, line);
+      string line;
+      getline(input, line);
 
-        if (line.length() == 0) {
-            continue;
-        }
-        
-        stringstream line_parser(line);
-        string token;
+      if (line.length() == 0)
+      {
+        continue;
+      }
 
+      stringstream line_parser(line);
+
+      vector<Param> params;
+
+      string name = get_token(line_parser);
+
+      string token;
+      while (!line_parser.eof())
+      {
         token = get_token(line_parser);
-
-        if (token.compare("cpy") == 0) {
-
-          token = get_token(line_parser);
-          auto token2 = get_token(line_parser);
-
-          instructions.push_back(make_pair(create_cpy(token, registers, create_param(token), create_param(token2)),
-                                 toggle_cpy(token, registers, create_param(token), create_param(token2))));
-
-        }
-        else if (token.compare("inc") == 0) {
-
-          token = get_token(line_parser);
-
-          instructions.push_back(make_pair(create_inc(token, registers, create_param(token)),
-                                          toggle_inc(token, registers, create_param(token))));
-        }
-        else if (token.compare("dec") == 0) {
-
-          token = get_token(line_parser);
-
-          instructions.push_back(make_pair(create_dec(token, registers, create_param(token)), 
-                                           toggle_dec(token, registers, create_param(token))));
-        }
-        else if (token.compare("jnz") == 0) {
-
-            token = get_token(line_parser);
-            auto token2 = get_token(line_parser);
-
-            instructions.push_back(make_pair(create_jmp(token, registers, create_param(token), create_param(token2)), 
-                                             toggle_jmp(token, registers, create_param(token), create_param(token2))));
-        }
-        else if (token.compare("tgl") == 0)
+        if (token != "")
         {
-
-          token = get_token(line_parser);
-
-          instructions.push_back(make_pair(create_tgl(token, registers, instructions, create_param(token)),
-                                           toggle_tgl(token, registers, create_param(token))));
+          params.push_back(create_param(token));
         }
+      }
+
+      instructions.push_back(create_inst(params, name));
     }
 
     int index = 0;
     while (index < instructions.size()){
 
-      instructions[index].first(registers, index);
+      //print(index, instructions, registers);
+      instructions[index].Do(registers, index, instructions);
     }
 
     return registers['a'];
