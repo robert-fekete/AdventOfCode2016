@@ -6,23 +6,22 @@
 #include <sstream>
 #include <vector>
 #include <functional>
+#include <queue>
 
 using namespace std;
 
-int solve_first(istream&);
-int solve_second(istream&);
+int solve(istream&, bool);
 
 int main(int argc, char* argv[])
 {
-    cout << solve_first(ifstream("test.txt")) << endl;  // 
-    //cout << solve_second(stringstream("")) << endl;  // 
+    cout << solve(ifstream("test.txt"), false) << endl;  // 14
 
 	auto f = ifstream("input.txt");
 	if (f.is_open()){
-		cout << solve_first(f) << endl;
+		cout << solve(f, false) << endl;
 		f.clear();
 		f.seekg(0, ios::beg);
-		// cout << solve_second(f) << endl;
+		cout << solve(f, true) << endl;
 	}
 	else{
 		cout << "File not found" << endl;
@@ -87,33 +86,62 @@ int find_max_targets(map<int, pair<int, int>>& targets)
   return max_key;
 }
 
-vector<pair<int, int>> get_nodes(vector<string>& board)
+map<int, int> bfs(pair<int, int> source, int targets, vector<string> board)
 {
-  vector<pair<int, int>> nodes;
-  for (int i = 0; i < board[0].length(); ++i)
+  queue<pair<pair<int, int>, int>> q;
+  q.push(make_pair(source, 0));
+  vector<pair<int, int>> visited;
+
+  map<int, int> distance;
+
+  while (q.size() > 0)
   {
-    for (int j = 0; j < board.size(); ++j)
+    auto state = q.front();
+    q.pop();
+    auto node = state.first;
+    auto steps = state.second;
+
+    if (node.first < 0 || node.first >= board[0].size() || node.second < 0 || node.second >= board.size())
     {
-      char cell = board[j][i];
-      if (cell != '#')
+      continue;
+    }
+
+    if (board[node.second][node.first] == '#')
+    {
+      continue;
+    }
+
+    if (find(begin(visited), end(visited), node) != end(visited))
+    {
+      continue;
+    }
+    visited.push_back(node);
+
+    if (board[node.second][node.first] >= '0' && board[node.second][node.first] <= '9')
+    {
+      int num = board[node.second][node.first] - '0';
+      if (num > targets)
       {
-        nodes.push_back(make_pair(i, j));
+        continue;
       }
+      distance[num] = steps;
+    }
+
+    if (distance.size() == targets + 1)
+    {
+      return distance;
+    }
+
+    for (auto offset : { make_pair(-1, 0), make_pair(1, 0), make_pair(0, -1), make_pair(0, 1) })
+    {
+      auto new_node = make_pair(node.first + offset.first, node.second + offset.second);
+      q.push(make_pair(new_node, steps + 1));
     }
   }
-
-  return nodes;
+  return distance;
 }
 
-bool is_neighbour(pair<int, int> a, pair<int, int> b)
-{
-  return (a.first == b.first + 1 && a.second == b.second) 
-    || (a.first == b.first - 1 && a.second == b.second)
-    || (a.second == b.second + 1 && a.first == b.first)
-    || (a.second == b.second - 1 && a.first == b.first);
-}
-
-int solve_first(istream& input){
+int solve(istream& input, bool go_back = false){
 
   auto board = parse(input);
   //print(board);
@@ -125,60 +153,19 @@ int solve_first(istream& input){
   //}
   //cout << endl;
   
-  auto nodes = get_nodes(board);
-  int n = nodes.size();
-  vector<vector<int>> shortest_paths;
+  vector<map<int, int>> shortest_paths;
 
-  for (auto node : nodes)
+  auto max_targets = find_max_targets(targets);
+  for (auto target : targets)
   {
-    vector<int> line;
-    for (auto node2 : nodes)
-    {
-      if (node == node2)
-      {
-        line.push_back(0);
-      }
-      else if (is_neighbour(node, node2))
-      {
-        line.push_back(1);
-      }
-      else
-      {
-        line.push_back(100000);
-      }
-    }
-    shortest_paths.push_back(line);
+    auto d = bfs(target.second, max_targets, board);
+    shortest_paths.push_back(d);
   }
 
-  for (int k = 0; k < n; ++k)
-  {
-    for (int i = 0; i < n; ++i)
-    {
-      for (int j = 0; j < n; ++j)
-      {
-        if (shortest_paths[i][j] > shortest_paths[i][k] + shortest_paths[k][j])
-        {
-          shortest_paths[i][j] = shortest_paths[i][k] + shortest_paths[k][j];
-        }
-      }
-    }
-  }
 
-  auto max_target = find_max_targets(targets);
-  for (int i = 0; i <= max_target; ++i)
-  {
-    auto node1 = find(begin(nodes), end(nodes), targets[i]);
-    auto index1 = node1 - begin(nodes);
-    for (int j = 0; j <= max_target; ++j)
-    {
-      auto node2 = find(begin(nodes), end(nodes), targets[j]);
-      auto index2 = node2 - begin(nodes);
-      //cout << nodes[index1].first << ":" << nodes[index1].second << "-" << nodes[index2].first << ":" << nodes[index2].second << "=" << shortest_paths[index1][index2] << endl;
-    }
-  }
-
+  //cout << nodes[index1].first << ":" << nodes[index1].second << "-" << nodes[index2].first << ":" << nodes[index2].second << "=" << shortest_paths[index1][index2] << endl;
   vector<int> permutation;
-  for (int i = 1; i <= max_target; ++i)
+  for (int i = 1; i <= max_targets; ++i)
   {
     permutation.push_back(i);
   }
@@ -190,20 +177,18 @@ int solve_first(istream& input){
     int from_node = 0;
     for (auto to_node: permutation)
     {
-      auto node1 = find(begin(nodes), end(nodes), targets[from_node]);
-      auto index1 = node1 - begin(nodes);
-
-      auto node2 = find(begin(nodes), end(nodes), targets[to_node]);
-      auto index2 = node2 - begin(nodes);
-
-      path += shortest_paths[index1][index2];
+      path += shortest_paths[from_node][to_node];
       from_node = to_node;
     }
-    /*for (auto i : permutation)
+    if (go_back)
     {
-      cout << i << " ";
+      path += shortest_paths[from_node][0];
     }
-    cout << ":" << path << endl;*/
+    //for (auto i : permutation)
+    //{
+    //  cout << i << " ";
+    //}
+    //cout << ":" << path << endl;
 
     if (min_path > path)
     {
@@ -213,8 +198,3 @@ int solve_first(istream& input){
 
 	return min_path;
 }
-
-int solve_second(istream& input){
-	return 0;
-}
-
